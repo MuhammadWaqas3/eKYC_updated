@@ -684,6 +684,83 @@ async def health():
         }
     })
 
+@router.post("/process/detect-only")
+async def api_detect_only(file: UploadFile = File(...)):
+    """
+    Fast YOLO-only detection for live camera preview frames.
+    Runs perspective correction + YOLO; no OCR. Designed for 500ms polling.
+    Returns: detected, side, confidence, bbox, guidance, ready_to_capture
+    """
+    try:
+        nparr = np.frombuffer(await file.read(), np.uint8)
+        image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if image is None:
+            return JSONResponse(content={"detected": False, "side": None,
+                                         "confidence": 0, "bbox": None,
+                                         "guidance": "Could not read frame",
+                                         "ready_to_capture": False})
+
+        corrected, _ = perspective_correction(image)
+        side, conf   = auto_detect_side(corrected)
+
+        # Extract bounding box from YOLO detections
+        bbox     = None
+        img_h, img_w = corrected.shape[:2]
+
+        if YOLO_AVAILABLE and yolo_model is not None:
+            try:
+                results = yolo_model(corrected, verbose=False, conf=YOLO_CONF)
+                best_area = 0
+                for result in results:
+                    if result.boxes is None or len(result.boxes) == 0:
+                        continue
+                    for box in result.boxes:
+                        x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+                        area = (x2 - x1) * (y2 - y1)
+                        if area > best_area:
+                            best_area = area
+                            coverage  = area / (img_h * img_w)
+                            bbox = {
+                                "x":        int(x1),
+                                "y":        int(y1),
+                                "w":        int(x2 - x1),
+                                "h":        int(y2 - y1),
+                                "img_w":    img_w,
+                                "img_h":    img_h,
+                                "coverage": round(float(coverage), 3),
+                            }
+            except Exception as e:
+                print(f"  detect-only YOLO error: {e}")
+
+        detected = side in ("Front", "Back") and conf >= YOLO_CONF
+
+        # Guidance message
+        if not detected:
+            guidance = "No CNIC detected — align your card inside the frame"
+        elif bbox and bbox["coverage"] < 0.35:
+            guidance = "Too far — move the CNIC closer"
+        elif bbox and bbox["coverage"] > 0.90:
+            guidance = "Too close — move the CNIC back slightly"
+        else:
+            guidance = "Perfect! Hold steady and capture"
+
+        ready = detected and bbox is not None and 0.35 <= bbox.get("coverage", 0) <= 0.90
+
+        return JSONResponse(content=sanitize({
+            "detected":         detected,
+            "side":             side,
+            "confidence":       round(float(conf), 3),
+            "bbox":             bbox,
+            "guidance":         guidance,
+            "ready_to_capture": ready,
+        }))
+
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e),
+                                                       "detected": False,
+                                                       "ready_to_capture": False})
+
+
 @router.post("/process/front")
 async def api_front(file: UploadFile = File(...)):
     try:    return JSONResponse(content=process_cnic_front(await file.read()))
