@@ -17,6 +17,25 @@ export default defineConfig({
     },
   },
 
+  // Proxy API calls to FastAPI backend during development
+  server: {
+    proxy: {
+      '/cnic': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/liveness': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/kyc': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+    },
+  },
+
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
 })
+

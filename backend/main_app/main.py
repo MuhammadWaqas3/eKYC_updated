@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-from routers import liveness, cnic, chatbot
+from routers import liveness, cnic, chatbot, fingerprint
 from routers.cnic import initialize_models
 
 app = FastAPI(title="Verification Pipeline")
@@ -13,6 +13,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"],
 app.include_router(liveness.router)
 app.include_router(cnic.router)
 app.include_router(chatbot.router)
+app.include_router(fingerprint.router)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 

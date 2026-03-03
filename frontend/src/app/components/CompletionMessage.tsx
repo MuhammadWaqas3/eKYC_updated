@@ -1,116 +1,151 @@
-import { Card } from './ui/card';
+import { useEffect, useState } from 'react';
 import { Button } from './ui/button';
-import { CheckCircle2, Download, Home, Bot } from 'lucide-react';
+import { CheckCircle2, Download, RefreshCw, Sparkles } from 'lucide-react';
 
 interface CompletionMessageProps {
   onReset: () => void;
 }
 
+const chatMessages = [
+  { text: "🎉 Congratulations! Your eKYC verification is complete.", delay: 400 },
+  { text: "✅ Your identity has been successfully verified.", delay: 1400 },
+  { text: "🏦 Your Avanza Digital Banking account has been opened!", delay: 2400 },
+  { text: "💳 You can now access all banking features and services.", delay: 3400 },
+  {
+    text: "📱 Download the Avanza app to start banking. Welcome aboard! 🚀",
+    delay: 4400,
+  },
+];
+
 export function CompletionMessage({ onReset }: CompletionMessageProps) {
   const verificationId = `AVZ-${Date.now().toString().slice(-8)}`;
+  const [visible, setVisible] = useState<number[]>([]);
+  const [showCard, setShowCard] = useState(false);
 
-  const handleDownloadCertificate = () => {
-    // Simulate certificate download
-    const blob = new Blob(
-      [
-        `AVANZA eKYC VERIFICATION CERTIFICATE\n\n` +
-        `Verification ID: ${verificationId}\n` +
-        `Date: ${new Date().toLocaleDateString()}\n` +
-        `Time: ${new Date().toLocaleTimeString()}\n` +
-        `Status: VERIFIED & APPROVED\n\n` +
-        `This certificate confirms that the eKYC verification has been completed successfully.\n` +
-        `All biometric and identity checks have been passed.\n\n` +
-        `Avanza Digital Banking\n` +
-        `Secure. Simple. Smart.`
-      ],
-      { type: 'text/plain' }
-    );
+  useEffect(() => {
+    chatMessages.forEach((_, i) => {
+      setTimeout(() => setVisible(prev => [...prev, i]), chatMessages[i].delay);
+    });
+    setTimeout(() => setShowCard(true), 5600);
+  }, []);
+
+  const handleDownload = () => {
+    const text =
+      `AVANZA eKYC VERIFICATION CERTIFICATE\n\n` +
+      `Verification ID : ${verificationId}\n` +
+      `Date            : ${new Date().toLocaleDateString()}\n` +
+      `Time            : ${new Date().toLocaleTimeString()}\n` +
+      `Status          : VERIFIED & APPROVED\n\n` +
+      `This certificate confirms that the eKYC verification has been completed successfully.\n` +
+      `All biometric and identity checks have passed.\n\n` +
+      `Avanza Digital Banking — Secure. Simple. Smart.`;
+
+    const blob = new Blob([text], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `avanza-kyc-certificate-${verificationId}.txt`;
+    a.download = `avanza-kyc-${verificationId}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-12">
-      {/* Success Animation Card */}
-      <Card className="p-12 bg-white shadow-2xl rounded-3xl border-0 text-center">
-        {/* Success Icon */}
-        <div className="relative inline-block mb-8">
-          <div className="w-32 h-32 bg-gradient-to-br from-[#A8D5BA] to-[#7CB899] rounded-full flex items-center justify-center mx-auto">
-            <CheckCircle2 className="w-16 h-16 text-white" />
-          </div>
-          {/* Animated rings */}
-          <div className="absolute inset-0 rounded-full border-4 border-[#A8D5BA]/30 animate-ping" />
-          <div className="absolute inset-0 rounded-full border-2 border-[#A8D5BA]/50" style={{ animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' }} />
-        </div>
+    <div className="max-w-2xl mx-auto px-4 py-10 space-y-6">
 
-        {/* Success Message */}
-        <h2 className="text-3xl font-semibold text-gray-800 mb-3">
-          Verification Successful! 🎉
-        </h2>
-        <p className="text-lg text-gray-600 mb-8">
-          Your eKYC verification has been successfully completed. ✨
+      {/* ── Success icon ── */}
+      <div className="text-center">
+        <div className="relative inline-block">
+          <div className="w-24 h-24 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-2xl">
+            <CheckCircle2 className="w-12 h-12 text-white" />
+          </div>
+          <div className="absolute inset-0 rounded-full border-4 border-green-300/40 animate-ping" />
+          <Sparkles className="absolute -top-1 -right-1 w-7 h-7 text-yellow-400 animate-bounce" />
+        </div>
+        <h2 className="text-3xl font-bold text-gray-800 mt-5">Account Opened! 🎊</h2>
+        <p className="text-gray-400 text-sm mt-1">Your eKYC is complete</p>
+      </div>
+
+      {/* ── Chat bubbles ── */}
+      <div className="bg-gray-50 rounded-2xl p-5 space-y-4 border border-gray-100">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+          Avanza Assistant
         </p>
 
-        {/* Verification ID */}
-        <div className="mb-10 p-6 bg-gradient-to-br from-[#FFF5F8] to-[#FFE5ED] rounded-2xl border border-[#FFD6E5]">
-          <p className="text-sm text-gray-600 mb-1">Verification ID</p>
-          <p className="text-2xl font-mono font-semibold text-[#A8D5BA]">{verificationId}</p>
-        </div>
-
-        {/* Chatbot Confirmation Message */}
-        <Card className="p-6 bg-gradient-to-r from-[#A8D5BA]/10 to-[#7CB899]/5 rounded-2xl border border-[#A8D5BA]/30 mb-8">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-[#A8D5BA] rounded-full flex items-center justify-center flex-shrink-0">
-              <Bot className="w-6 h-6 text-white" />
+        {chatMessages.map((msg, i) => (
+          <div
+            key={i}
+            className={`flex items-start gap-3 transition-all duration-500 ${visible.includes(i) ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'
+              }`}
+          >
+            {/* Avatar */}
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#aa2771] to-[#8a1f5c] flex items-center justify-center flex-shrink-0 mt-0.5 text-white text-xs font-bold shadow-sm">
+              A
             </div>
-            <div className="text-left flex-1">
-              <p className="font-semibold text-gray-800 mb-2">Avanza Assistant</p>
-              <p className="text-sm text-gray-700 leading-relaxed">
-                Congratulations! Your eKYC verification has been successfully completed. 
-                All your documents and biometric data have been verified. Your account is now fully activated 
-                and you can start using all Avanza banking services. Welcome to the future of banking! 🚀
-              </p>
+            {/* Bubble */}
+            <div className="bg-white rounded-2xl rounded-tl-sm shadow-sm border border-gray-100 px-4 py-3 max-w-[85%]">
+              <p className="text-sm text-gray-800 leading-relaxed">{msg.text}</p>
             </div>
           </div>
-        </Card>
+        ))}
 
-        {/* What's Next Section */}
-        <div className="mb-8 p-6 bg-white border-2 border-gray-100 rounded-2xl">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">What's Next?</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
-            <div className="p-4 bg-[#FFF5F8] rounded-xl">
-              <div className="w-10 h-10 bg-[#A8D5BA] rounded-lg flex items-center justify-center mb-3">
-                <span className="text-white font-semibold">1</span>
-              </div>
-              <p className="text-sm font-medium text-gray-800 mb-1">Account Activation</p>
-              <p className="text-xs text-gray-600">Your account will be activated within 24 hours</p>
+        {/* Typing indicator */}
+        {visible.length < chatMessages.length && (
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#aa2771] to-[#8a1f5c] flex items-center justify-center flex-shrink-0 text-white text-xs font-bold shadow-sm">
+              A
             </div>
-            <div className="p-4 bg-[#FFF5F8] rounded-xl">
-              <div className="w-10 h-10 bg-[#A8D5BA] rounded-lg flex items-center justify-center mb-3">
-                <span className="text-white font-semibold">2</span>
+            <div className="bg-white rounded-2xl rounded-tl-sm shadow-sm border border-gray-100 px-4 py-3">
+              <div className="flex gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
-              <p className="text-sm font-medium text-gray-800 mb-1">Download App</p>
-              <p className="text-xs text-gray-600">Get the Avanza mobile app for easy access</p>
-            </div>
-            <div className="p-4 bg-[#FFF5F8] rounded-xl">
-              <div className="w-10 h-10 bg-[#A8D5BA] rounded-lg flex items-center justify-center mb-3">
-                <span className="text-white font-semibold">3</span>
-              </div>
-              <p className="text-sm font-medium text-gray-800 mb-1">Start Banking</p>
-              <p className="text-xs text-gray-600">Access all features and services immediately</p>
             </div>
           </div>
+        )}
+      </div>
+
+      {/* ── Verification ID + Actions (slide in after messages) ── */}
+      <div
+        className={`space-y-4 transition-all duration-700 ${showCard ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+          }`}
+      >
+        {/* ID card */}
+        <div className="bg-gradient-to-br from-[#FFF5F8] to-[#FFE5ED] border border-[#FFD6E5] rounded-2xl p-5 flex items-center justify-between">
+          <div>
+            <p className="text-xs text-gray-500 mb-1">Verification ID</p>
+            <p className="text-xl font-mono font-bold text-[#aa2771] tracking-wide">
+              {verificationId}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              {new Date().toLocaleDateString('en-PK', { dateStyle: 'long' })}
+            </p>
+          </div>
+          <CheckCircle2 className="w-10 h-10 text-green-400" />
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4">
+        {/* What's next */}
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { n: '1', title: 'Account Active', sub: 'Within 24 hours' },
+            { n: '2', title: 'Download App', sub: 'Avanza mobile app' },
+            { n: '3', title: 'Start Banking', sub: 'All features unlocked' },
+          ].map(i => (
+            <div key={i.n} className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 text-center">
+              <div className="w-8 h-8 bg-[#aa2771] rounded-full flex items-center justify-center mx-auto mb-2">
+                <span className="text-white text-sm font-bold">{i.n}</span>
+              </div>
+              <p className="text-xs font-semibold text-gray-800">{i.title}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{i.sub}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Buttons */}
+        <div className="flex flex-col sm:flex-row gap-3">
           <Button
-            onClick={handleDownloadCertificate}
-            className="flex-1 h-14 bg-[#A8D5BA] hover:bg-[#7CB899] text-white rounded-xl shadow-md"
+            onClick={handleDownload}
+            className="flex-1 h-13 bg-[#aa2771] hover:bg-[#8a1f5c] text-white rounded-xl shadow-md py-3"
           >
             <Download className="w-5 h-5 mr-2" />
             Download Certificate
@@ -118,18 +153,17 @@ export function CompletionMessage({ onReset }: CompletionMessageProps) {
           <Button
             onClick={onReset}
             variant="outline"
-            className="flex-1 h-14 border-2 border-gray-300 rounded-xl hover:bg-gray-50"
+            className="flex-1 h-13 border-2 border-gray-200 rounded-xl hover:bg-gray-50 py-3"
           >
-            <Home className="w-5 h-5 mr-2" />
-            Return to Home
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Start New Application
           </Button>
         </div>
 
-        {/* Footer Note */}
-        <p className="text-xs text-gray-500 mt-8">
-          You will receive a confirmation email shortly with your verification details.
+        <p className="text-center text-xs text-gray-400">
+          🔒 A confirmation email will be sent to you shortly.
         </p>
-      </Card>
+      </div>
     </div>
   );
 }

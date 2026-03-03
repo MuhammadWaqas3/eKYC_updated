@@ -1,191 +1,192 @@
 import { useState, useRef } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
-import { Fingerprint, Loader2, CheckCircle2, Camera } from 'lucide-react';
+import {
+  Fingerprint, Loader2, CheckCircle2, Camera, AlertCircle, RefreshCw, ArrowRight,
+} from 'lucide-react';
 
 interface FingerprintVerificationProps {
   onComplete: () => void;
 }
 
+type FPStep = 'ready' | 'camera' | 'captured' | 'processing' | 'done';
+
 export function FingerprintVerification({ onComplete }: FingerprintVerificationProps) {
-  const [isCapturing, setIsCapturing] = useState(false);
-  const [capturedImage, setCapturedImage] = useState<string>('');
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [isVerified, setIsVerified] = useState(false);
+  const [step, setStep] = useState<FPStep>('ready');
+  const [capturedImage, setCapturedImage] = useState('');
+  const [errMsg, setErrMsg] = useState('');
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  const startCamera = async () => {
+  // ---------- Open Camera ----------
+  const openCamera = async () => {
+    setErrMsg('');
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } 
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
       });
+      streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        streamRef.current = stream;
-        setIsCapturing(true);
       }
-    } catch (error) {
-      console.error('Error accessing camera:', error);
+      setStep('camera');
+    } catch {
+      setErrMsg(
+        'Could not access camera. Please allow camera permission in your browser and try again.'
+      );
     }
   };
 
-  const stopCamera = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-    setIsCapturing(false);
+  // ---------- Capture photo ----------
+  const capturePhoto = () => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return;
+
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    setCapturedImage(dataUrl);
+
+    // Stop camera stream
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    streamRef.current = null;
+
+    setStep('captured');
   };
 
-  const captureFingerprint = () => {
-    if (videoRef.current && canvasRef.current) {
-      const context = canvasRef.current.getContext('2d');
-      if (context) {
-        canvasRef.current.width = videoRef.current.videoWidth;
-        canvasRef.current.height = videoRef.current.videoHeight;
-        context.drawImage(videoRef.current, 0, 0);
-        const imageData = canvasRef.current.toDataURL('image/png');
-        setCapturedImage(imageData);
-        stopCamera();
-        performVerification();
-      }
-    }
+  // ---------- Retake ----------
+  const retake = () => {
+    setCapturedImage('');
+    setStep('ready');
   };
 
-  const performVerification = () => {
-    setIsVerifying(true);
-    
-    // Simulate fingerprint verification
+  // ---------- Proceed to Confirmation ----------
+  const handleDone = () => {
+    setStep('processing');
     setTimeout(() => {
-      setIsVerifying(false);
-      setIsVerified(true);
-      setTimeout(() => {
-        onComplete();
-      }, 2000);
-    }, 3000);
+      setStep('done');
+      setTimeout(onComplete, 1200);
+    }, 1800);
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-8">
+    <div className="max-w-2xl mx-auto px-4 py-8">
       <Card className="p-8 bg-white shadow-lg rounded-3xl border-0">
+
+        {/* ── Header ── */}
         <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-gradient-to-br from-[#aa2771] to-[#8a1f5c] rounded-full flex items-center justify-center mx-auto mb-4">
-            <Fingerprint className="w-10 h-10 text-white" />
+          <div
+            className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 transition-all duration-500 ${step === 'done'
+                ? 'bg-gradient-to-br from-green-400 to-green-600'
+                : 'bg-gradient-to-br from-[#aa2771] to-[#8a1f5c]'
+              }`}
+          >
+            {step === 'done' ? (
+              <CheckCircle2 className="w-10 h-10 text-white" />
+            ) : (
+              <Fingerprint className="w-10 h-10 text-white" />
+            )}
           </div>
-          <h3 className="text-2xl font-semibold text-gray-800 mb-2">Fingerprint Verification 👆</h3>
-          <p className="text-sm text-[#626262]">Place your fingers on a white surface and capture</p>
+
+          <h3 className="text-2xl font-semibold text-gray-800 mb-1">
+            {step === 'done' ? 'Fingerprint Verified ✅' : 'Fingerprint Verification'}
+          </h3>
+          <p className="text-sm text-gray-500">
+            {step === 'ready' && 'Click "Open Camera" to take a photo of your fingers'}
+            {step === 'camera' && 'Place your 4 fingers (no thumb) clearly in view, then click Capture'}
+            {step === 'captured' && 'Photo captured! Click "Done – Move to Next Step" to continue'}
+            {step === 'processing' && 'Processing fingerprint image…'}
+            {step === 'done' && 'Moving to confirmation…'}
+          </p>
         </div>
 
-        <div className="max-w-2xl mx-auto">
-          {!isCapturing && !capturedImage ? (
+        {/* ── Error ── */}
+        {errMsg && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex gap-3 items-start">
+            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm text-red-700">{errMsg}</p>
+            </div>
+          </div>
+        )}
+
+        <div className="max-w-xl mx-auto space-y-5">
+
+          {/* ════════ STEP: READY ════════ */}
+          {step === 'ready' && (
             <div className="space-y-6">
               {/* Instructions */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 bg-[#FFF5F8] rounded-2xl border border-[#FFD6E5]">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-[#A8D5BA] rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-white text-sm font-semibold">1</span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  { n: '1', t: 'Clean & dry fingers' },
+                  { n: '2', t: 'White background' },
+                  { n: '3', t: 'Good lighting' },
+                  { n: '4', t: 'Hold steady' },
+                ].map(i => (
+                  <div key={i.n} className="p-3 bg-[#FFF5F8] rounded-xl border border-[#FFD6E5] text-center">
+                    <div className="w-7 h-7 bg-[#aa2771] rounded-full flex items-center justify-center mx-auto mb-2">
+                      <span className="text-white text-xs font-bold">{i.n}</span>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-800">Clean Your Fingers</p>
-                      <p className="text-xs text-gray-600 mt-1">Ensure your fingers are clean and dry</p>
-                    </div>
+                    <p className="text-xs text-gray-700 font-medium">{i.t}</p>
                   </div>
-                </div>
-
-                <div className="p-4 bg-[#FFF5F8] rounded-2xl border border-[#FFD6E5]">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-[#A8D5BA] rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-white text-sm font-semibold">2</span>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-800">White Background</p>
-                      <p className="text-xs text-gray-600 mt-1">Place fingers on a white surface</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-4 bg-[#FFF5F8] rounded-2xl border border-[#FFD6E5]">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-[#A8D5BA] rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-white text-sm font-semibold">3</span>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-800">Good Lighting</p>
-                      <p className="text-xs text-gray-600 mt-1">Use adequate lighting for clarity</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-4 bg-[#FFF5F8] rounded-2xl border border-[#FFD6E5]">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-[#A8D5BA] rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-white text-sm font-semibold">4</span>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-800">Steady Position</p>
-                      <p className="text-xs text-gray-600 mt-1">Keep your hand steady while capturing</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Hand Guide Illustration */}
-              <div className="aspect-video bg-gradient-to-br from-[#FFF5F8] to-[#FFE5ED] rounded-2xl flex items-center justify-center relative overflow-hidden">
-                <div className="text-center z-10">
-                  <div className="mb-4">
-                    <svg className="w-32 h-32 mx-auto text-[#A8D5BA]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83" />
-                      <circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.2" />
-                    </svg>
-                  </div>
-                  <p className="text-sm font-medium text-gray-700">Place all four fingers here</p>
-                  <p className="text-xs text-gray-500 mt-1">(Excluding thumb)</p>
-                </div>
+                ))}
               </div>
 
               <Button
-                onClick={startCamera}
-                className="w-full h-14 bg-[#A8D5BA] hover:bg-[#7CB899] text-white rounded-xl shadow-md"
+                onClick={openCamera}
+                className="w-full h-14 bg-[#aa2771] hover:bg-[#8a1f5c] text-white rounded-2xl text-base font-semibold shadow-md"
               >
                 <Camera className="w-5 h-5 mr-2" />
-                Start Camera
+                Open Camera
               </Button>
             </div>
-          ) : null}
+          )}
 
-          {isCapturing && (
-            <div className="space-y-6">
-              <div className="relative">
+          {/* ════════ STEP: CAMERA ════════ */}
+          {step === 'camera' && (
+            <div className="space-y-4">
+              {/* Live preview */}
+              <div
+                className="relative rounded-2xl overflow-hidden border-2 border-[#aa2771]/40 bg-black"
+                style={{ aspectRatio: '16/9' }}
+              >
                 <video
                   ref={videoRef}
                   autoPlay
                   playsInline
                   muted
-                  className="w-full aspect-video rounded-2xl object-cover"
+                  className="w-full h-full object-cover"
                 />
-                {/* Hand Guide Overlay */}
+                {/* Guide overlay */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="border-4 border-[#A8D5BA] border-dashed rounded-2xl p-8 bg-black/20">
-                    <p className="text-white text-sm font-medium">Place fingers here</p>
+                  <div className="border-4 border-dashed border-white/70 rounded-2xl px-14 py-8 bg-black/20 text-center">
+                    <Fingerprint className="w-7 h-7 text-white/80 mx-auto mb-1" />
+                    <p className="text-white text-sm font-semibold drop-shadow">
+                      4 fingers here (no thumb)
+                    </p>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-3">
+              <div className="flex gap-3">
                 <Button
-                  onClick={captureFingerprint}
-                  className="w-full h-14 bg-[#A8D5BA] hover:bg-[#7CB899] text-white rounded-xl shadow-md"
+                  onClick={capturePhoto}
+                  className="flex-1 h-12 bg-[#aa2771] hover:bg-[#8a1f5c] text-white rounded-xl font-semibold"
                 >
-                  <Fingerprint className="w-5 h-5 mr-2" />
-                  Capture Fingerprint
+                  <Camera className="w-4 h-4 mr-2" />
+                  Capture Photo
                 </Button>
                 <Button
-                  onClick={stopCamera}
+                  onClick={retake}
                   variant="outline"
-                  className="w-full h-12 border-gray-300 rounded-xl"
+                  className="h-12 px-5 border-gray-300 rounded-xl"
                 >
                   Cancel
                 </Button>
@@ -193,50 +194,77 @@ export function FingerprintVerification({ onComplete }: FingerprintVerificationP
             </div>
           )}
 
-          {capturedImage && (
-            <div className="space-y-6">
-              <div className="relative">
+          {/* ════════ STEP: CAPTURED ════════ */}
+          {step === 'captured' && capturedImage && (
+            <div className="space-y-4">
+              {/* Preview */}
+              <div className="relative rounded-2xl overflow-hidden border-2 border-[#aa2771]/30">
                 <img
                   src={capturedImage}
                   alt="Captured fingerprint"
-                  className="w-full aspect-video rounded-2xl object-cover"
+                  className="w-full object-cover"
+                  style={{ maxHeight: 280 }}
                 />
-                {isVerified && (
-                  <div className="absolute top-4 right-4 bg-[#A8D5BA] text-white px-4 py-2 rounded-full flex items-center gap-2">
-                    <CheckCircle2 className="w-5 h-5" />
-                    <span className="text-sm font-medium">Verified</span>
-                  </div>
-                )}
+                <div className="absolute top-3 right-3 bg-[#aa2771] text-white text-xs font-semibold px-3 py-1.5 rounded-full">
+                  📸 Photo Captured
+                </div>
               </div>
 
-              {isVerifying && (
-                <div className="p-6 bg-[#A8D5BA]/10 rounded-2xl border border-[#A8D5BA]/30">
-                  <div className="flex items-center gap-4">
-                    <Loader2 className="w-8 h-8 text-[#A8D5BA] animate-spin" />
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-800">Verifying Fingerprints...</p>
-                      <p className="text-sm text-gray-600 mt-1">Analyzing biometric data</p>
-                    </div>
-                  </div>
-                </div>
-              )}
+              <div className="p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3">
+                <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
+                <p className="text-sm text-green-800 font-medium">
+                  Fingerprint photo captured successfully!
+                </p>
+              </div>
 
-              {isVerified && (
-                <div className="p-6 bg-gradient-to-br from-[#A8D5BA]/20 to-[#7CB899]/10 rounded-2xl border border-[#A8D5BA]/30">
-                  <div className="flex items-center gap-4">
-                    <CheckCircle2 className="w-10 h-10 text-[#A8D5BA]" />
-                    <div className="flex-1">
-                      <p className="text-lg font-semibold text-gray-800">Fingerprint Verified!</p>
-                      <p className="text-sm text-gray-600 mt-1">Proceeding to confirmation...</p>
-                    </div>
-                  </div>
-                </div>
-              )}
+              <div className="flex gap-3">
+                {/* PRIMARY: Done & move to next */}
+                <Button
+                  onClick={handleDone}
+                  className="flex-1 h-13 bg-[#aa2771] hover:bg-[#8a1f5c] text-white rounded-xl font-semibold py-3 text-base"
+                >
+                  <ArrowRight className="w-5 h-5 mr-2" />
+                  Done – Move to Next Step
+                </Button>
+
+                {/* SECONDARY: Retake */}
+                <Button
+                  onClick={retake}
+                  variant="outline"
+                  className="h-13 px-5 border-gray-300 rounded-xl py-3"
+                >
+                  <RefreshCw className="w-4 h-4 mr-1" />
+                  Retake
+                </Button>
+              </div>
             </div>
           )}
 
-          <canvas ref={canvasRef} className="hidden" />
+          {/* ════════ STEP: PROCESSING ════════ */}
+          {step === 'processing' && (
+            <div className="py-10 flex flex-col items-center gap-5">
+              <Loader2 className="w-14 h-14 text-[#aa2771] animate-spin" />
+              <div className="text-center">
+                <p className="text-base font-semibold text-gray-800">Processing Fingerprint…</p>
+                <p className="text-sm text-gray-500 mt-1">Please wait a moment</p>
+              </div>
+            </div>
+          )}
+
+          {/* ════════ STEP: DONE ════════ */}
+          {step === 'done' && (
+            <div className="py-8 flex flex-col items-center gap-4">
+              <CheckCircle2 className="w-16 h-16 text-green-500" />
+              <div className="text-center">
+                <p className="text-lg font-semibold text-gray-800">Fingerprint Verified!</p>
+                <p className="text-sm text-gray-500 mt-1">Moving to confirmation form…</p>
+              </div>
+            </div>
+          )}
+
         </div>
+
+        <canvas ref={canvasRef} className="hidden" />
       </Card>
     </div>
   );

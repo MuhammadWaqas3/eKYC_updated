@@ -12,8 +12,8 @@ interface ProgressTimelineProps {
 
 const steps = [
   { id: 1, title: 'Personal Details' },
-  { id: 2, title: 'CNIC Verification' },
-  { id: 3, title: 'Face Verification' },
+  { id: 2, title: 'CNIC Upload' },
+  { id: 3, title: 'Face Verify' },
   { id: 4, title: 'Fingerprint' },
   { id: 5, title: 'Confirmation' },
 ];
@@ -34,9 +34,9 @@ export function ProgressTimeline({ currentStep }: ProgressTimelineProps) {
         <div className="relative">
           {/* Progress Line Background */}
           <div className="absolute top-5 left-0 right-0 h-0.5 bg-gray-200" style={{ zIndex: 0 }} />
-          
+
           {/* Progress Line Foreground */}
-          <div 
+          <div
             className="absolute top-5 left-0 h-0.5 bg-[#aa2771] transition-all duration-500 ease-out"
             style={{ width: `${progressPercentage}%`, zIndex: 1 }}
           />
@@ -49,13 +49,12 @@ export function ProgressTimeline({ currentStep }: ProgressTimelineProps) {
                 <div key={step.id} className="flex flex-col items-center">
                   {/* Circle */}
                   <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
-                      status === 'completed'
-                        ? 'bg-[#aa2771] text-white shadow-md'
-                        : status === 'active'
+                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${status === 'completed'
+                      ? 'bg-[#aa2771] text-white shadow-md'
+                      : status === 'active'
                         ? 'bg-[#aa2771] text-white shadow-lg ring-4 ring-[#aa2771]/30'
                         : 'bg-white border-2 border-gray-300 text-gray-400'
-                    }`}
+                      }`}
                   >
                     {status === 'completed' ? (
                       <Check className="w-5 h-5" />
@@ -67,13 +66,12 @@ export function ProgressTimeline({ currentStep }: ProgressTimelineProps) {
                   {/* Label */}
                   <div className="mt-3 text-center max-w-[120px]">
                     <p
-                      className={`text-sm font-medium transition-colors ${
-                        status === 'active'
-                          ? 'text-[#aa2771]'
-                          : status === 'completed'
+                      className={`text-sm font-medium transition-colors ${status === 'active'
+                        ? 'text-[#aa2771]'
+                        : status === 'completed'
                           ? 'text-gray-700'
                           : 'text-gray-400'
-                      }`}
+                        }`}
                     >
                       {step.title}
                     </p>
