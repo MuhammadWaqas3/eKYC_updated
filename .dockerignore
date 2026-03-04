@@ -1,0 +1,25 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyc
+
+# Dataset (large training data — NOT needed at runtime)
+backend/main_app/dataset/
+
+# Git
+.git/
+.gitignore
+
+# Local env files
+.env.local
+backend/main_app/.env
+
+# Frontend (not needed in backend image)
+frontend/
+
+# Node
+node_modules/
+
+# Temp files
+backend/main_app/temp/
+*.log

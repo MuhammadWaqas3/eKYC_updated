@@ -1,0 +1,25 @@
+{
+    "version": 2,
+    "buildCommand": "npm run build",
+    "outputDirectory": "dist",
+    "installCommand": "npm install",
+    "framework": "vite",
+    "rewrites": [
+        {
+            "source": "/kyc/:path*",
+            "destination": "https://your-railway-backend-url.railway.app/kyc/:path*"
+        },
+        {
+            "source": "/cnic/:path*",
+            "destination": "https://your-railway-backend-url.railway.app/cnic/:path*"
+        },
+        {
+            "source": "/liveness/:path*",
+            "destination": "https://your-railway-backend-url.railway.app/liveness/:path*"
+        },
+        {
+            "source": "/(.*)",
+            "destination": "/index.html"
+        }
+    ]
+}
