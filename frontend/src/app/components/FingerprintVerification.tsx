@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import {
@@ -20,19 +20,35 @@ export function FingerprintVerification({ onComplete }: FingerprintVerificationP
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
+  // Whenever step becomes 'camera', attach the stream to the video element and play it.
+  // This handles the race condition where the video element may not be mounted yet
+  // when openCamera() first assigns srcObject.
+  useEffect(() => {
+    if (step === 'camera' && streamRef.current && videoRef.current) {
+      const video = videoRef.current;
+      if (!video.srcObject) {
+        video.srcObject = streamRef.current;
+      }
+      video.play().catch(() => {
+        // autoPlay policy may block; user interaction already happened (button click)
+      });
+    }
+  }, [step]);
+
   // ---------- Open Camera ----------
   const openCamera = async () => {
     setErrMsg('');
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
       });
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
+
+      // Set step first; the useEffect above will attach the stream after the
+      // video element renders into the DOM.
       setStep('camera');
-    } catch {
+    } catch (err) {
+      console.error('Camera error:', err);
       setErrMsg(
         'Could not access camera. Please allow camera permission in your browser and try again.'
       );
@@ -63,6 +79,9 @@ export function FingerprintVerification({ onComplete }: FingerprintVerificationP
 
   // ---------- Retake ----------
   const retake = () => {
+    // Stop any lingering stream before going back
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    streamRef.current = null;
     setCapturedImage('');
     setStep('ready');
   };
@@ -84,8 +103,8 @@ export function FingerprintVerification({ onComplete }: FingerprintVerificationP
         <div className="text-center mb-8">
           <div
             className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 transition-all duration-500 ${step === 'done'
-                ? 'bg-gradient-to-br from-green-400 to-green-600'
-                : 'bg-gradient-to-br from-[#aa2771] to-[#8a1f5c]'
+              ? 'bg-gradient-to-br from-green-400 to-green-600'
+              : 'bg-gradient-to-br from-[#aa2771] to-[#8a1f5c]'
               }`}
           >
             {step === 'done' ? (
@@ -163,6 +182,9 @@ export function FingerprintVerification({ onComplete }: FingerprintVerificationP
                   playsInline
                   muted
                   className="w-full h-full object-cover"
+                  onLoadedMetadata={() => {
+                    videoRef.current?.play().catch(() => { });
+                  }}
                 />
                 {/* Guide overlay */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

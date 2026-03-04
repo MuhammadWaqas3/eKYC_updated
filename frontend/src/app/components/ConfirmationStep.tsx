@@ -71,11 +71,12 @@ export function ConfirmationStep({
   cnicData,
   onConfirm,
 }: ConfirmationStepProps) {
-  const [isEditing, setIsEditing] = useState(false);
+  // Separate edit states for personal details and CNIC details
+  const [isEditingPersonal, setIsEditingPersonal] = useState(false);
+  const [isEditingCnic, setIsEditingCnic] = useState(false);
+
   const [personal, setPersonal] = useState({ ...personalData });
   const [cnic, setCnic] = useState({ ...cnicData });
-
-  const handleSave = () => setIsEditing(false);
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
@@ -104,13 +105,13 @@ export function ConfirmationStep({
             </div>
           </div>
           <Button
-            onClick={() => (isEditing ? handleSave() : setIsEditing(true))}
+            onClick={() => setIsEditingPersonal(e => !e)}
             variant="outline"
             size="sm"
             className="rounded-lg border-[#aa2771]/30 text-[#aa2771] hover:bg-[#aa2771]/5 text-xs"
           >
             <Edit2 className="w-3.5 h-3.5 mr-1.5" />
-            {isEditing ? 'Save' : 'Edit'}
+            {isEditingPersonal ? 'Save' : 'Edit'}
           </Button>
         </div>
 
@@ -119,28 +120,28 @@ export function ConfirmationStep({
             icon={<User className="w-3.5 h-3.5" />}
             label="Full Name"
             value={personal.fullName}
-            editing={isEditing}
+            editing={isEditingPersonal}
             onChange={v => setPersonal(p => ({ ...p, fullName: v }))}
           />
           <FieldRow
             icon={<Phone className="w-3.5 h-3.5" />}
             label="Phone Number"
             value={personal.phoneNumber}
-            editing={isEditing}
+            editing={isEditingPersonal}
             onChange={v => setPersonal(p => ({ ...p, phoneNumber: v }))}
           />
           <FieldRow
             icon={<Mail className="w-3.5 h-3.5" />}
             label="Email Address"
             value={personal.email}
-            editing={isEditing}
+            editing={isEditingPersonal}
             onChange={v => setPersonal(p => ({ ...p, email: v }))}
           />
           <FieldRow
             icon={<CreditCard className="w-3.5 h-3.5" />}
             label="Account Type"
             value={personal.accountType}
-            editing={isEditing}
+            editing={isEditingPersonal}
             onChange={v => setPersonal(p => ({ ...p, accountType: v }))}
           />
         </div>
@@ -148,14 +149,26 @@ export function ConfirmationStep({
 
       {/* ── Card: CNIC Details ── */}
       <Card className="p-6 bg-white shadow-sm rounded-2xl border border-gray-100">
-        <div className="flex items-center gap-3 mb-5">
-          <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
-            <FileText className="w-5 h-5 text-blue-600" />
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
+              <FileText className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <h4 className="text-base font-semibold text-gray-800">CNIC Details</h4>
+              <p className="text-xs text-gray-400">Extracted from your identity document</p>
+            </div>
           </div>
-          <div>
-            <h4 className="text-base font-semibold text-gray-800">CNIC Details</h4>
-            <p className="text-xs text-gray-400">Extracted from your identity document</p>
-          </div>
+          {/* Edit button for OCR / CNIC section */}
+          <Button
+            onClick={() => setIsEditingCnic(e => !e)}
+            variant="outline"
+            size="sm"
+            className="rounded-lg border-blue-300 text-blue-600 hover:bg-blue-50 text-xs"
+          >
+            <Edit2 className="w-3.5 h-3.5 mr-1.5" />
+            {isEditingCnic ? 'Save' : 'Edit'}
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -163,43 +176,43 @@ export function ConfirmationStep({
             icon={<CreditCard className="w-3.5 h-3.5" />}
             label="CNIC Number"
             value={cnic.cnicNumber}
-            editing={false}
-            onChange={() => { }}
+            editing={isEditingCnic}
+            onChange={v => setCnic(c => ({ ...c, cnicNumber: v }))}
           />
           <FieldRow
             icon={<User className="w-3.5 h-3.5" />}
             label="Full Name (CNIC)"
             value={cnic.fullName}
-            editing={false}
-            onChange={() => { }}
+            editing={isEditingCnic}
+            onChange={v => setCnic(c => ({ ...c, fullName: v }))}
           />
           <FieldRow
             icon={<User className="w-3.5 h-3.5" />}
             label="Father's Name"
             value={cnic.fatherName}
-            editing={false}
-            onChange={() => { }}
+            editing={isEditingCnic}
+            onChange={v => setCnic(c => ({ ...c, fatherName: v }))}
           />
           <FieldRow
             icon={<Calendar className="w-3.5 h-3.5" />}
             label="Date of Birth"
             value={cnic.dateOfBirth}
-            editing={false}
-            onChange={() => { }}
+            editing={isEditingCnic}
+            onChange={v => setCnic(c => ({ ...c, dateOfBirth: v }))}
           />
           <FieldRow
             icon={<Calendar className="w-3.5 h-3.5" />}
             label="Date of Issuance"
             value={cnic.dateOfIssuance}
-            editing={false}
-            onChange={() => { }}
+            editing={isEditingCnic}
+            onChange={v => setCnic(c => ({ ...c, dateOfIssuance: v }))}
           />
           <FieldRow
             icon={<Calendar className="w-3.5 h-3.5" />}
             label="Date of Expiry"
             value={cnic.dateOfExpiry}
-            editing={false}
-            onChange={() => { }}
+            editing={isEditingCnic}
+            onChange={v => setCnic(c => ({ ...c, dateOfExpiry: v }))}
           />
         </div>
       </Card>
@@ -233,22 +246,14 @@ export function ConfirmationStep({
         </div>
       </Card>
 
-      {/* ── Edit / Confirm Buttons ── */}
+      {/* ── Confirm Button ── */}
       <div className="flex flex-col sm:flex-row gap-3 pt-2">
-        <Button
-          onClick={() => setIsEditing(e => !e)}
-          variant="outline"
-          className="flex-1 h-14 border-2 border-gray-200 rounded-2xl text-base hover:bg-gray-50"
-        >
-          <Edit2 className="w-5 h-5 mr-2 text-gray-500" />
-          {isEditing ? 'Cancel Edit' : 'Edit Details'}
-        </Button>
         <Button
           onClick={onConfirm}
           className="flex-1 h-14 bg-[#aa2771] hover:bg-[#8a1f5c] text-white rounded-2xl text-base font-semibold shadow-lg"
         >
           <ChevronRight className="w-5 h-5 mr-2" />
-          Confirm & Open Account
+          Confirm &amp; Open Account
         </Button>
       </div>
     </div>

@@ -64,6 +64,7 @@ export function CNICVerification({ onComplete }: CNICVerificationProps) {
   const [isAnalyzed, setIsAnalyzed] = useState(false);
   const [confidence, setConfidence] = useState(0);
   const [fieldConfs, setFieldConfs] = useState<FieldConfidence[]>([]);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [cnicData, setCnicData] = useState<CNICData>({
     cnicNumber: '', fullName: '', fatherName: '',
     dateOfBirth: '', dateOfIssuance: '', dateOfExpiry: '',
@@ -226,12 +227,15 @@ export function CNICVerification({ onComplete }: CNICVerificationProps) {
         const fd = new FormData();
         fd.append('file', blob, 'cnic.jpg');
         const res = await fetchWithAuth('/cnic/process/auto', { method: 'POST', body: fd });
-        if (!res.ok) throw new Error(`OCR failed (${res.status})`);
+        if (!res.ok) {
+          const status = res.status;
+          throw Object.assign(new Error(), { status });
+        }
         const data = await res.json();
         applyOcrResult(data, '');
         setCamStatus('done'); setGuidance('✅ Document processed successfully!'); stopCamera();
       } catch (err: any) {
-        setCamError('OCR failed: ' + err.message);
+        setCamError(friendlyOcrError(err, err?.status));
         setCamStatus('ready'); setIsCapturing(false);
         startDetectionLoop(); animFrameRef.current = requestAnimationFrame(drawLoop);
       }
@@ -266,18 +270,30 @@ export function CNICVerification({ onComplete }: CNICVerificationProps) {
     setUploadedFile(file); setPreviewUrl(URL.createObjectURL(file));
     setIsAnalyzed(false); setConfidence(0);
   };
+  const friendlyOcrError = (err: any, status?: number): string => {
+    if (status === 403) return '⚠️ Session expired — please sign out and sign in again, then retry.';
+    if (status === 401) return '⚠️ Not authenticated — please sign in first.';
+    if (!navigator.onLine || err?.message?.includes('fetch')) return '⚠️ Cannot reach server — make sure the backend is running on port 8000.';
+    return `OCR failed (${status ?? err?.message ?? 'unknown error'}). Please try again.`;
+  };
+
   const handleAnalyze = () => {
     if (!uploadedFile) return;
     setIsAnalyzing(true);
+    setUploadError(null);
     const fd = new FormData(); fd.append('file', uploadedFile);
     fetchWithAuth('/cnic/process/auto', { method: 'POST', body: fd })
-      .then(r => { if (!r.ok) throw new Error(`OCR failed (${r.status})`); return r.json(); })
+      .then(r => {
+        if (!r.ok) { r.json().catch(() => null); throw Object.assign(new Error(), { status: r.status }); }
+        return r.json();
+      })
       .then(data => applyOcrResult(data, previewUrl))
-      .catch(err => alert('OCR failed: ' + err.message))
+      .catch(err => setUploadError(friendlyOcrError(err, err?.status)))
       .finally(() => setIsAnalyzing(false));
   };
   const handleRetake = () => {
-    setUploadedFile(null); setPreviewUrl(''); setIsAnalyzed(false); setConfidence(0); setFieldConfs([]);
+    setUploadedFile(null); setPreviewUrl(''); setIsAnalyzed(false);
+    setConfidence(0); setFieldConfs([]); setUploadError(null);
   };
 
   const fieldConf = (f: keyof CNICData) => fieldConfs.find(x => x.field === f)?.confidence || 0;
@@ -341,6 +357,14 @@ export function CNICVerification({ onComplete }: CNICVerificationProps) {
           {/* Mode: Upload */}
           {mode === 'upload' && (
             <div className="space-y-4">
+              {/* Upload error banner */}
+              {uploadError && (
+                <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5">
+                  <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-red-700 flex-1">{uploadError}</p>
+                  <button onClick={() => setUploadError(null)} className="text-red-400 hover:text-red-600 text-xs ml-1">✕</button>
+                </div>
+              )}
               {!previewUrl ? (
                 <div className="space-y-3">
                   <Button

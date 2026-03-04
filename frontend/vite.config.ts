@@ -32,6 +32,14 @@ export default defineConfig({
         target: 'http://localhost:8000',
         changeOrigin: true,
       },
+      '/fingerprint': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/chatbot': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
     },
   },
 
