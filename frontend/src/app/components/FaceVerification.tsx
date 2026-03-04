@@ -3,6 +3,7 @@ import { Button } from './ui/button';
 import {
   Camera, Loader2, CheckCircle2, X, RefreshCw, AlertCircle, ArrowRight,
 } from 'lucide-react';
+import { fetchWithAuth } from '../../lib/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface FaceVerificationProps {
@@ -48,7 +49,7 @@ export function FaceVerification({ cnicImageUrl, onComplete }: FaceVerificationP
   useEffect(() => () => {
     stopPolling();
     if (manualTimerRef.current) clearTimeout(manualTimerRef.current);
-    fetch('/liveness/stop_webcam', { method: 'POST' }).catch(() => { });
+    fetchWithAuth('/liveness/stop_webcam', { method: 'POST' }).catch(() => { });
   }, []);
 
   const uploadCnicFace = useCallback(async () => {
@@ -60,11 +61,11 @@ export function FaceVerification({ cnicImageUrl, onComplete }: FaceVerificationP
     setStep('uploading_cnic');
     setErrMsg('');
     try {
-      const res = await fetch(cnicImageUrl);
+      const res = await fetchWithAuth(cnicImageUrl);
       const blob = await res.blob();
       const fd = new FormData();
       fd.append('file', blob, 'cnic_face.jpg');
-      const upRes = await fetch('/liveness/upload', { method: 'POST', body: fd });
+      const upRes = await fetchWithAuth('/liveness/upload', { method: 'POST', body: fd });
       if (!upRes.ok) throw new Error(`Upload failed (${upRes.status})`);
       const data = await upRes.json();
       if (!data.ok) {
@@ -72,7 +73,7 @@ export function FaceVerification({ cnicImageUrl, onComplete }: FaceVerificationP
         setStep('failed');
         return;
       }
-      await fetch('/liveness/start_webcam', { method: 'POST' });
+      await fetchWithAuth('/liveness/start_webcam', { method: 'POST' });
       setStep('streaming');
       startPolling();
       // Har 30 seconds baad manual proceed button dikhao
@@ -88,14 +89,14 @@ export function FaceVerification({ cnicImageUrl, onComplete }: FaceVerificationP
     stopPolling();
     pollingRef.current = setInterval(async () => {
       try {
-        const res = await fetch('/liveness/status');
+        const res = await fetchWithAuth('/liveness/status');
         if (!res.ok) return;
         const data: StatusData = await res.json();
         setStatusData(data);
         if (data.match === true && data.liveness === 'LIVE') {
           stopPolling();
           setStep('success');
-          await fetch('/liveness/stop_webcam', { method: 'POST' }).catch(() => { });
+          await fetchWithAuth('/liveness/stop_webcam', { method: 'POST' }).catch(() => { });
           setTimeout(() => onComplete(), 1600);
         }
       } catch (_) { }
@@ -109,7 +110,7 @@ export function FaceVerification({ cnicImageUrl, onComplete }: FaceVerificationP
   const handleStop = async () => {
     stopPolling();
     if (manualTimerRef.current) clearTimeout(manualTimerRef.current);
-    await fetch('/liveness/stop_webcam', { method: 'POST' }).catch(() => { });
+    await fetchWithAuth('/liveness/stop_webcam', { method: 'POST' }).catch(() => { });
     setStep('idle');
     setErrMsg('');
     setShowManualProceed(false);
@@ -119,7 +120,7 @@ export function FaceVerification({ cnicImageUrl, onComplete }: FaceVerificationP
   const handleManualProceed = async () => {
     stopPolling();
     if (manualTimerRef.current) clearTimeout(manualTimerRef.current);
-    await fetch('/liveness/stop_webcam', { method: 'POST' }).catch(() => { });
+    await fetchWithAuth('/liveness/stop_webcam', { method: 'POST' }).catch(() => { });
     setStep('success');
     setTimeout(onComplete, 1500);
   };
@@ -127,7 +128,7 @@ export function FaceVerification({ cnicImageUrl, onComplete }: FaceVerificationP
   const handleRetry = async () => {
     stopPolling();
     if (manualTimerRef.current) clearTimeout(manualTimerRef.current);
-    await fetch('/liveness/stop_webcam', { method: 'POST' }).catch(() => { });
+    await fetchWithAuth('/liveness/stop_webcam', { method: 'POST' }).catch(() => { });
     setStep('idle');
     setErrMsg('');
     setShowManualProceed(false);

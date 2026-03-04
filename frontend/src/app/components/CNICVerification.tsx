@@ -7,6 +7,7 @@ import {
   AlertCircle, RefreshCw, X,
 } from 'lucide-react';
 import { Progress } from './ui/progress';
+import { fetchWithAuth } from '../../lib/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface CNICData {
@@ -172,7 +173,7 @@ export function CNICVerification({ onComplete }: CNICVerificationProps) {
         try {
           const fd = new FormData();
           fd.append('file', blob, 'frame.jpg');
-          const res = await fetch('/cnic/process/detect-only', { method: 'POST', body: fd });
+          const res = await fetchWithAuth('/cnic/process/detect-only', { method: 'POST', body: fd });
           if (!res.ok) return;
           const data: DetectResult = await res.json();
           detectionRef.current = data;
@@ -224,7 +225,7 @@ export function CNICVerification({ onComplete }: CNICVerificationProps) {
       try {
         const fd = new FormData();
         fd.append('file', blob, 'cnic.jpg');
-        const res = await fetch('/cnic/process/auto', { method: 'POST', body: fd });
+        const res = await fetchWithAuth('/cnic/process/auto', { method: 'POST', body: fd });
         if (!res.ok) throw new Error(`OCR failed (${res.status})`);
         const data = await res.json();
         applyOcrResult(data, '');
@@ -269,7 +270,7 @@ export function CNICVerification({ onComplete }: CNICVerificationProps) {
     if (!uploadedFile) return;
     setIsAnalyzing(true);
     const fd = new FormData(); fd.append('file', uploadedFile);
-    fetch('/cnic/process/auto', { method: 'POST', body: fd })
+    fetchWithAuth('/cnic/process/auto', { method: 'POST', body: fd })
       .then(r => { if (!r.ok) throw new Error(`OCR failed (${r.status})`); return r.json(); })
       .then(data => applyOcrResult(data, previewUrl))
       .catch(err => alert('OCR failed: ' + err.message))

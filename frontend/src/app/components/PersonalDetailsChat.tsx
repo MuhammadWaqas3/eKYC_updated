@@ -4,6 +4,7 @@ import { Input } from './ui/input';
 import { Card } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Send, Bot, User, Lock, HelpCircle, CheckCircle2, ChevronDown, ChevronUp, AlertCircle, RefreshCw } from 'lucide-react';
+import { fetchWithAuth } from '../../lib/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -85,7 +86,7 @@ export function PersonalDetailsChat({ onComplete }: PersonalDetailsChatProps) {
     setIsInitializing(true);
     setInitError(null);
     try {
-      const res = await fetch(`${API_BASE}/start`, { method: 'POST' });
+      const res = await fetchWithAuth(`${API_BASE}/start`, { method: 'POST' });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body?.detail ?? `Server returned ${res.status}`);
@@ -123,7 +124,7 @@ export function PersonalDetailsChat({ onComplete }: PersonalDetailsChatProps) {
     setIsTyping(true);
 
     try {
-      const res = await fetch(`${API_BASE}/chat`, {
+      const res = await fetchWithAuth(`${API_BASE}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sessionId, message: text }),
@@ -305,8 +306,8 @@ export function PersonalDetailsChat({ onComplete }: PersonalDetailsChatProps) {
               ) : (
                 <>
                   <div className={`p-4 rounded-2xl ${msg.type === 'bot'
-                      ? 'bg-white shadow-sm border border-gray-100'
-                      : 'bg-gradient-to-br from-[#aa2771] to-[#8a1f5c] text-white'
+                    ? 'bg-white shadow-sm border border-gray-100'
+                    : 'bg-gradient-to-br from-[#aa2771] to-[#8a1f5c] text-white'
                     }`}>
                     <p className="text-sm leading-relaxed">{renderContent(msg.content)}</p>
                   </div>

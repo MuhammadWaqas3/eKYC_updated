@@ -7,6 +7,7 @@ import { FingerprintVerification } from "./components/FingerprintVerification";
 import { ConfirmationStep } from "./components/ConfirmationStep";
 import { CompletionMessage } from "./components/CompletionMessage";
 import { GroqChatbot } from "./components/GroqChatbot";
+import { EmailOTPVerification } from "./components/EmailOTPVerification";
 import { Shield } from "lucide-react";
 
 interface PersonalDetailsData {
@@ -26,8 +27,8 @@ interface CNICData {
   imageUrl?: string;
 }
 
-// Steps: 1=Personal, 2=CNIC, 3=Face, 4=Fingerprint, 5=Confirmation, 6=Complete
-type Step = 1 | 2 | 3 | 4 | 5 | 6;
+// Steps: 1=Personal, OTP, 2=CNIC, 3=Face, 4=Fingerprint, 5=Confirmation, 6=Complete
+type Step = 1 | 'OTP' | 2 | 3 | 4 | 5 | 6;
 
 export default function App() {
   const [currentStep, setCurrentStep] = useState<Step>(1);
@@ -36,7 +37,7 @@ export default function App() {
 
   const handlePersonalDetailsComplete = (data: PersonalDetailsData) => {
     setPersonalData(data);
-    setCurrentStep(2);
+    setCurrentStep('OTP');
   };
 
   const handleCNICComplete = (data: CNICData) => {
@@ -77,12 +78,18 @@ export default function App() {
       </header>
 
       {/* ── Progress Timeline ───────────────────────────────────────── */}
-      {currentStep !== 6 && <ProgressTimeline currentStep={currentStep} />}
+      {currentStep !== 6 && <ProgressTimeline currentStep={currentStep === 'OTP' ? 1 : currentStep} />}
 
       {/* ── Main Content ────────────────────────────────────────────── */}
       <main className="py-6 md:py-8">
         {currentStep === 1 && (
           <PersonalDetailsChat onComplete={handlePersonalDetailsComplete} />
+        )}
+        {currentStep === 'OTP' && personalData && (
+          <EmailOTPVerification
+            email={personalData.email}
+            onVerified={() => setCurrentStep(2)}
+          />
         )}
         {currentStep === 2 && (
           <CNICVerification onComplete={handleCNICComplete} />
